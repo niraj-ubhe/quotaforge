@@ -9,7 +9,7 @@ const requestLogger = (req: Request, res: Response, next: NextFunction) => {
     logger.info({
       method: req.method,
       url: req.originalUrl,
-      status: req.statusCode,
+      status: res.statusCode,
       duration: `${duration}ms`,
     });
   });
