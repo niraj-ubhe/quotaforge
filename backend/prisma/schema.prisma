@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  apis Api[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Api {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  baseUrl     String
+
+  ownerId     String
+  owner       User @relation(fields: [ownerId], references: [id])
+
+  keys ApiKey[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requestsPerMinute Int @default(100)
+
+  requests ApiRequest[]
+}
+
+model ApiKey {
+  id         String   @id @default(cuid())
+
+  name       String
+
+  prefix     String   @unique
+
+  keyHash    String
+
+  isActive   Boolean @default(true)
+
+  lastUsedAt DateTime?
+
+  apiId String
+  api   Api @relation(fields: [apiId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requests ApiRequest[]
+}
+
+model ApiRequest {
+  id           String   @id @default(cuid())
+
+  apiId        String
+  apiKeyId     String
+
+  method       String
+  path         String
+  statusCode   Int
+  responseTime Int
+
+  createdAt    DateTime @default(now())
+
+  api          Api      @relation(fields: [apiId], references: [id])
+  apiKey       ApiKey  @relation(fields: [apiKeyId], references: [id])
+
+  @@index([apiId])
+  @@index([apiKeyId])
+  @@index([createdAt])
+}
