@@ -5,6 +5,7 @@ import {
   getApiAnalytics,
   getTopEndpoints,
   getStatusCodes,
+  getTimeline,
 } from "../services/analytics.service";
 
 export const overview = asyncHandler(async (req: Request, res: Response) => {
@@ -41,6 +42,22 @@ export const topEndpoints = asyncHandler(
 export const statusCodes = asyncHandler(
   async (req: Request<{ apiId: string }>, res: Response) => {
     const data = await getStatusCodes(req.params.apiId, req.user!.userId);
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  },
+);
+
+export const timeline = asyncHandler(
+  async (
+    req: Request<{ apiId: string }, {}, {}, { range?: "1d" | "7d" | "30d" }>,
+    res: Response,
+  ) => {
+    const range = req.query.range ?? "7d";
+
+    const data = await getTimeline(req.params.apiId, req.user!.userId, range);
 
     res.status(200).json({
       success: true,

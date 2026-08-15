@@ -152,3 +152,67 @@ export const getStatusCodes = async (apiId: string, ownerId: string) => {
     requests: item._count.id,
   }));
 };
+
+export const getTimeline = async (
+  apiId: string,
+  ownerId: string,
+  range: "1d" | "7d" | "30d",
+) => {
+  if (range === "1d") {
+    const result = await prisma.$queryRaw<
+      {
+        date: Date;
+        requests: bigint;
+      }[]
+    >`
+      SELECT
+        DATE_TRUNC('hour', "createdAt") AS date,
+        COUNT(*) AS requests
+      FROM "ApiRequest"
+      WHERE "apiId" = ${apiId}
+        AND "createdAt" >= NOW() - INTERVAL '1 day'
+        AND EXISTS (
+          SELECT 1
+          FROM "Api"
+          WHERE "Api"."id" = "ApiRequest"."apiId"
+            AND "Api"."ownerId" = ${ownerId}
+        )
+      GROUP BY DATE_TRUNC('hour', "createdAt")
+      ORDER BY date ASC;
+    `;
+
+    return result.map((item) => ({
+      date: item.date,
+      requests: Number(item.requests),
+    }));
+  }
+
+  const days = range === "7d" ? 7 : 30;
+
+  const result = await prisma.$queryRaw<
+    {
+      date: Date;
+      requests: bigint;
+    }[]
+  >`
+    SELECT
+      DATE_TRUNC('day', "createdAt") AS date,
+      COUNT(*) AS requests
+    FROM "ApiRequest"
+    WHERE "apiId" = ${apiId}
+      AND "createdAt" >= NOW() - (${days} * INTERVAL '1 day')
+      AND EXISTS (
+        SELECT 1
+        FROM "Api"
+        WHERE "Api"."id" = "ApiRequest"."apiId"
+          AND "Api"."ownerId" = ${ownerId}
+      )
+    GROUP BY DATE_TRUNC('day', "createdAt")
+    ORDER BY date ASC;
+  `;
+
+  return result.map((item) => ({
+    date: item.date,
+    requests: Number(item.requests),
+  }));
+};
