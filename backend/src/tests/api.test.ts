@@ -1,11 +1,63 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 
-import { createTestUser, createTestApi } from "./helpers/testHelpers";
+import { createTestUser, createTestApi, createTestApiWithKey } from "./helpers/testHelpers";
+import prisma from "../lib/prisma";
 
 import app from "../app";
 
 describe("API Management", () => {
+  it("should delete an owned API and its dependent records", async () => {
+    const token = await createTestUser();
+    const { apiId } = await createTestApiWithKey(token);
+    const keysResponse = await request(app)
+      .get("/api-keys")
+      .set("Authorization", `Bearer ${token}`);
+    const apiKeyId = keysResponse.body.data[0].id;
+
+    await prisma.apiRequest.create({
+      data: {
+        apiId,
+        apiKeyId,
+        method: "GET",
+        path: "/posts",
+        statusCode: 200,
+        responseTime: 1,
+      },
+    });
+
+    const response = await request(app)
+      .delete(`/apis/${apiId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      message: "API deleted successfully",
+    });
+
+    const apisResponse = await request(app)
+      .get("/apis")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(apisResponse.body.data).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: apiId })]),
+    );
+    expect(await prisma.apiKey.count({ where: { apiId } })).toBe(0);
+    expect(await prisma.apiRequest.count({ where: { apiId } })).toBe(0);
+  });
+
+  it("should not allow a user to delete another user's API", async () => {
+    const ownerToken = await createTestUser();
+    const otherToken = await createTestUser();
+    const apiId = await createTestApi(ownerToken);
+
+    const response = await request(app)
+      .delete(`/apis/${apiId}`)
+      .set("Authorization", `Bearer ${otherToken}`);
+
+    expect(response.status).toBe(404);
+  });
   it("should reject access to APIs without a token", async () => {
     const response = await request(app).get("/apis");
 

@@ -2,8 +2,19 @@ import request from "supertest";
 import { describe, it, expect } from "vitest";
 import app from "../app";
 import { createTestUser, createTestApiWithKey } from "./helpers/testHelpers";
+import { normalizeEndpointPath } from "../services/analytics.service";
 
 describe("Analytics", () => {
+  it("normalizes legacy gateway endpoint path formats", () => {
+    const apiId = "1urgkby1yxy7p";
+
+    expect(normalizeEndpointPath("/posts", apiId)).toBe("/posts");
+    expect(normalizeEndpointPath(`${apiId}/posts`, apiId)).toBe("/posts");
+    expect(normalizeEndpointPath(`/gateway/${apiId}/posts`, apiId)).toBe("/posts");
+    expect(normalizeEndpointPath(`/gateway-docs/${apiId}/posts`, apiId)).toBe(
+      `/gateway-docs/${apiId}/posts`,
+    );
+  });
   it("should show gateway requests in the overview", async () => {
     // Create a test user
     const token = await createTestUser();

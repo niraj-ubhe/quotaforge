@@ -74,22 +74,24 @@ export const updateApi = async (
 };
 
 export const deleteApi = async (id: string, ownerId: string) => {
-  const api = await prisma.api.findFirst({
-    where: {
-      id,
-      ownerId,
-    },
+  return prisma.$transaction(async (tx) => {
+    const api = await tx.api.findFirst({
+      where: {
+        id,
+        ownerId,
+      },
+    });
+
+    if (!api) {
+      throw new NotFoundError("API not found");
+    }
+
+    // ApiRequest has restrictive foreign keys to both Api and ApiKey. Remove
+    // the history first, then the keys, before deleting the owned API itself.
+    await tx.apiRequest.deleteMany({ where: { apiId: id } });
+    await tx.apiKey.deleteMany({ where: { apiId: id } });
+    await tx.api.delete({ where: { id } });
+
+    return api;
   });
-
-  if (!api) {
-    throw new NotFoundError("API not found");
-  }
-
-  await prisma.api.delete({
-    where: {
-      id,
-    },
-  });
-
-  return api;
 };

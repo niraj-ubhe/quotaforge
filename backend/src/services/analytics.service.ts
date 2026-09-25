@@ -9,6 +9,23 @@ type LogRequestData = {
   responseTime: number;
 };
 
+/**
+ * Converts legacy gateway-form paths to the upstream-relative path that is
+ * recorded for current requests. The API id is used as an exact route segment
+ * so legitimate upstream paths are not altered incidentally.
+ */
+export const normalizeEndpointPath = (path: string, apiId: string) => {
+  const segments = path.split("/").filter(Boolean);
+
+  if (segments[0] === "gateway" && segments[1] === apiId) {
+    segments.splice(0, 2);
+  } else if (segments[0] === apiId) {
+    segments.shift();
+  }
+
+  return segments.length ? `/${segments.join("/")}` : "/";
+};
+
 export const logRequest = async (data: LogRequestData) => {
   return prisma.apiRequest.create({
     data: {
@@ -116,18 +133,19 @@ export const getTopEndpoints = async (apiId: string, ownerId: string) => {
     _count: {
       id: true,
     },
-    orderBy: {
-      _count: {
-        id: "desc",
-      },
-    },
-    take: 10,
   });
 
-  return result.map((item) => ({
-    path: item.path,
-    requests: item._count.id,
-  }));
+  const endpointCounts = new Map<string, number>();
+
+  for (const item of result) {
+    const path = normalizeEndpointPath(item.path, apiId);
+    endpointCounts.set(path, (endpointCounts.get(path) ?? 0) + item._count.id);
+  }
+
+  return [...endpointCounts.entries()]
+    .map(([path, requests]) => ({ path, requests }))
+    .sort((a, b) => b.requests - a.requests || a.path.localeCompare(b.path))
+    .slice(0, 10);
 };
 
 export const getStatusCodes = async (apiId: string, ownerId: string) => {
