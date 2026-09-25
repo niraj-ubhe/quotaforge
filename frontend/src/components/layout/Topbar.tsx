@@ -23,7 +23,7 @@ export default function Topbar({ onMenu, theme, onThemeToggle }: TopbarProps) {
       </button>
       <div className="topbar-status">
         <span className="status-dot" />
-        Local environment
+      {import.meta.env.PROD ? "Production" : "Local environment"}
       </div>
       <div className="user-section">
         <button
