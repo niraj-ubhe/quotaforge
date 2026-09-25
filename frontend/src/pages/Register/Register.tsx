@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../context/ToastContext";
 import FormField from "../../components/common/FormField";
@@ -16,6 +17,7 @@ export default function Register() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,13 +53,17 @@ export default function Register() {
       <div className="auth-panel">
         <div className="brand-lockup">
           <span className="brand-mark">QF</span>
-          <div>
+          <div className="auth-brand-copy">
             <h1>QuotaForge</h1>
             <p>Create your control-plane account</p>
           </div>
         </div>
-        <h2>Register</h2>
-        <form onSubmit={handleSubmit} noValidate>
+        <div className="auth-heading">
+          <p className="auth-eyebrow">Get started</p>
+          <h2>Create your workspace</h2>
+          <p className="auth-copy">Set up your account and start managing APIs.</p>
+        </div>
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <FormField
             label="Name"
             name="name"
@@ -78,28 +84,48 @@ export default function Register() {
           <FormField
             label="Password"
             name="password"
-            type="password"
+            type={showPasswords ? "text" : "password"}
             placeholder="At least 8 characters"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             error={errors.password}
+            endAdornment={
+              <button
+                className="password-toggle"
+                type="button"
+                onClick={() => setShowPasswords((visible) => !visible)}
+                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
+              >
+                {showPasswords ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            }
           />
           <FormField
             label="Confirm password"
             name="confirmPassword"
-            type="password"
+            type={showPasswords ? "text" : "password"}
             placeholder="Repeat password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             error={errors.confirmPassword}
+            endAdornment={
+              <button
+                className="password-toggle"
+                type="button"
+                onClick={() => setShowPasswords((visible) => !visible)}
+                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
+              >
+                {showPasswords ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            }
           />
           {formError && <p className="form-banner error">{formError}</p>}
-          <Button type="submit" loading={loading}>
+          <Button className="auth-submit" type="submit" loading={loading}>
             Create account
           </Button>
         </form>
         <p className="auth-footer">
-          Already registered? <Link to="/login">Sign in</Link>
+          <span>Already registered?</span> <Link to="/login">Sign in</Link>
         </p>
       </div>
     </div>

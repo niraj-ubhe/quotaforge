@@ -1,12 +1,14 @@
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, Moon, Sun } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import Button from "../common/Button";
 
 interface TopbarProps {
   onMenu: () => void;
+  theme: "dark" | "light";
+  onThemeToggle: () => void;
 }
 
-export default function Topbar({ onMenu }: TopbarProps) {
+export default function Topbar({ onMenu, theme, onThemeToggle }: TopbarProps) {
   const { user, logout } = useAuth();
 
   return (
@@ -24,6 +26,15 @@ export default function Topbar({ onMenu }: TopbarProps) {
         Local environment
       </div>
       <div className="user-section">
+        <button
+          type="button"
+          className="icon-button theme-toggle"
+          onClick={onThemeToggle}
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+          title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+        >
+          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
         <div className="user-meta">
           <span className="user-name">{user?.name ?? "Account"}</span>
           <span className="user-email">{user?.email}</span>

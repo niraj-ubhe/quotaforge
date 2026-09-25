@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../context/ToastContext";
 import FormField from "../../components/common/FormField";
@@ -12,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -42,14 +44,17 @@ export default function Login() {
       <div className="auth-panel">
         <div className="brand-lockup">
           <span className="brand-mark">QF</span>
-          <div>
+          <div className="auth-brand-copy">
             <h1>QuotaForge</h1>
             <p>Developer API management platform</p>
           </div>
         </div>
-        <h2>Sign in</h2>
-        <p className="auth-copy">Access your gateway, keys, and analytics.</p>
-        <form onSubmit={handleSubmit} noValidate>
+        <div className="auth-heading">
+          <p className="auth-eyebrow">Welcome back</p>
+          <h2>Sign in to your workspace</h2>
+          <p className="auth-copy">Access your gateway, keys, and analytics.</p>
+        </div>
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <FormField
             label="Email"
             name="email"
@@ -62,19 +67,29 @@ export default function Login() {
           <FormField
             label="Password"
             name="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Enter your password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
+            endAdornment={
+              <button
+                className="password-toggle"
+                type="button"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            }
           />
           {error && <p className="form-banner error">{error}</p>}
-          <Button type="submit" loading={loading}>
+          <Button className="auth-submit" type="submit" loading={loading}>
             Sign in
           </Button>
         </form>
         <p className="auth-footer">
-          Need an account? <Link to="/register">Create one</Link>
+          <span>Need an account?</span> <Link to="/register">Create one</Link>
         </p>
       </div>
     </div>
