@@ -31,3 +31,9 @@ export function updateApi(
     body: JSON.stringify(payload),
   });
 }
+
+export function deleteApi(id: string) {
+  return apiRequest<ApiResponse<undefined>>(`/apis/${id}`, {
+    method: "DELETE",
+  });
+}

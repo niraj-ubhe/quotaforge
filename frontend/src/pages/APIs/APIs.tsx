@@ -3,11 +3,17 @@ import PageHeader from "../../components/common/PageHeader";
 import FormField from "../../components/common/FormField";
 import Button from "../../components/common/Button";
 import Modal from "../../components/common/Modal";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Spinner from "../../components/common/Spinner";
 import EmptyState from "../../components/common/EmptyState";
 import ErrorState from "../../components/common/ErrorState";
 import AlgorithmBadge from "../../components/common/AlgorithmBadge";
-import { createApi, listApis, updateApi } from "../../services/api.service";
+import {
+  createApi,
+  deleteApi,
+  listApis,
+  updateApi,
+} from "../../services/api.service";
 import { useToast } from "../../context/ToastContext";
 import type { Api, RateLimitAlgorithm } from "../../types";
 import { getApiBaseUrl } from "../../services/apiClient";
@@ -32,6 +38,8 @@ export default function APIs() {
   const [editName, setEditName] = useState("");
   const [editBaseUrl, setEditBaseUrl] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [apiToDelete, setApiToDelete] = useState<Api | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -128,6 +136,22 @@ export default function APIs() {
       notify(err instanceof Error ? err.message : "Failed to update API", "error");
     } finally {
       setSavingEdit(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!apiToDelete) return;
+
+    setDeleting(true);
+    try {
+      await deleteApi(apiToDelete.id);
+      notify("API deleted successfully");
+      setApiToDelete(null);
+      await load();
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Failed to delete API", "error");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -230,6 +254,13 @@ export default function APIs() {
                     >
                       Edit API
                     </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      onClick={() => setApiToDelete(api)}
+                    >
+                      Delete API
+                    </Button>
                   </div>
                 </article>
               ))}
@@ -318,6 +349,17 @@ export default function APIs() {
           </Button>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(apiToDelete)}
+        title={`Delete API '${apiToDelete?.name ?? ""}'?`}
+        description={`This removes the API resource '${apiToDelete?.name ?? ""}', including its associated API keys and request history. This action cannot be undone.`}
+        confirmLabel="Delete API"
+        danger
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setApiToDelete(null)}
+      />
     </>
   );
 }

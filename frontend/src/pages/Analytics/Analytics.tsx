@@ -215,6 +215,7 @@ export default function Analytics() {
                       />
                       <YAxis stroke="#94a3b8" allowDecimals={false} />
                       <Tooltip
+                        cursor={false}
                         contentStyle={{
                           background: "#151d2e",
                           border: "1px solid rgba(148,163,184,0.2)",
@@ -247,6 +248,7 @@ export default function Analytics() {
                       <XAxis dataKey="statusCode" stroke="#94a3b8" />
                       <YAxis stroke="#94a3b8" allowDecimals={false} />
                       <Tooltip
+                        cursor={false}
                         contentStyle={{
                           background: "#151d2e",
                           border: "1px solid rgba(148,163,184,0.2)",
@@ -275,6 +277,7 @@ export default function Analytics() {
                         stroke="#94a3b8"
                       />
                       <Tooltip
+                        cursor={false}
                         contentStyle={{
                           background: "#151d2e",
                           border: "1px solid rgba(148,163,184,0.2)",
