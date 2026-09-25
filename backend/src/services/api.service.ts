@@ -5,6 +5,8 @@ export const createApi = async (data: {
   name: string;
   description?: string;
   baseUrl: string;
+  requestsPerMinute?: number;
+  rateLimitAlgorithm?: "FIXED_WINDOW" | "SLIDING_WINDOW" | "TOKEN_BUCKET";
   ownerId: string;
 }) => {
   const api = await prisma.api.create({
@@ -13,6 +15,8 @@ export const createApi = async (data: {
       description: data.description,
       baseUrl: data.baseUrl,
       ownerId: data.ownerId,
+      requestsPerMinute: data.requestsPerMinute,
+      rateLimitAlgorithm: data.rateLimitAlgorithm,
     },
   });
 
@@ -46,6 +50,8 @@ export const updateApi = async (
     name?: string;
     description?: string;
     baseUrl?: string;
+    requestsPerMinute?: number;
+    rateLimitAlgorithm?: "FIXED_WINDOW" | "SLIDING_WINDOW" | "TOKEN_BUCKET";
   },
 ) => {
   const api = await prisma.api.findFirst({

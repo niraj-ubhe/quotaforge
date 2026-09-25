@@ -12,6 +12,7 @@ declare global {
         apiKeyId: string;
         baseUrl: string;
         requestsPerMinute: number;
+        rateLimitAlgorithm: "FIXED_WINDOW" | "SLIDING_WINDOW" | "TOKEN_BUCKET";
       };
     }
   }

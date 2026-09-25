@@ -62,6 +62,7 @@ export const apiKeyMiddleware = async (
     apiId: storedKey.apiId,
     baseUrl: storedKey.api.baseUrl,
     requestsPerMinute: storedKey.api.requestsPerMinute,
+    rateLimitAlgorithm: storedKey.api.rateLimitAlgorithm,
   };
 
   next();

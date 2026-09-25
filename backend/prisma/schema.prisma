@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RateLimitAlgorithm {
+  FIXED_WINDOW
+  SLIDING_WINDOW
+  TOKEN_BUCKET
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
@@ -31,7 +37,8 @@ model Api {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  requestsPerMinute Int @default(100)
+  requestsPerMinute  Int @default(100)
+  rateLimitAlgorithm RateLimitAlgorithm @default(FIXED_WINDOW)
 
   requests ApiRequest[]
 }

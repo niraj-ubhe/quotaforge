@@ -20,18 +20,25 @@ export const proxyRequest = async (req: Request<GatewayParams>) => {
     const response = await axios({
       method: req.method,
       url: targetUrl,
+
+      // Only forward safe/useful headers
       headers: {
-        ...req.headers,
-        host: undefined,
-        "x-api-key": undefined,
+        accept: req.headers.accept,
+        "content-type": req.headers["content-type"],
+        "user-agent": req.headers["user-agent"],
       },
+
       params: req.query,
-      data: req.body,
+
+      // GET and HEAD requests should not send a body
+      data:
+        req.method !== "GET" && req.method !== "HEAD"
+          ? req.body
+          : undefined,
     });
 
     const responseTime = Date.now() - startTime;
 
-    // Log successful request
     try {
       await logRequest({
         apiId: req.api!.apiId,
@@ -61,7 +68,7 @@ export const proxyRequest = async (req: Request<GatewayParams>) => {
   } catch (error) {
     const responseTime = Date.now() - startTime;
 
-    // If the target API responded with an error status
+    // Target API responded with an HTTP error
     if (error instanceof AxiosError && error.response) {
       try {
         await logRequest({
@@ -82,7 +89,7 @@ export const proxyRequest = async (req: Request<GatewayParams>) => {
       };
     }
 
-    // Target API did not respond at all
+    // Target API did not respond
     try {
       await logRequest({
         apiId: req.api!.apiId,
@@ -96,6 +103,14 @@ export const proxyRequest = async (req: Request<GatewayParams>) => {
       console.error("Failed to log analytics:", analyticsError);
     }
 
-    throw error;
+    
+
+    return {
+      status: 502,
+      data: {
+        success: false,
+        message: "Bad Gateway",
+      },
+    };
   }
 };

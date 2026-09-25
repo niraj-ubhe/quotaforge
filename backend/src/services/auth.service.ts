@@ -30,6 +30,12 @@ export const registerUser = async (data: {
       email: data.email,
       password: hashedPassword,
     },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      createdAt: true,
+    },
   });
 
   return user;

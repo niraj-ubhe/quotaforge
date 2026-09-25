@@ -16,6 +16,12 @@ export const createApiSchema = z.object({
   baseUrl: z.url({
     error: "Base URL must be a valid URL",
   }),
+
+  requestsPerMinute: z.number().int().positive().max(100000).optional(),
+
+  rateLimitAlgorithm: z
+    .enum(["FIXED_WINDOW", "SLIDING_WINDOW", "TOKEN_BUCKET"])
+    .optional(),
 });
 
 export const updateApiSchema = createApiSchema.partial();
