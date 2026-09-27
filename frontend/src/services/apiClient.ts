@@ -61,7 +61,8 @@ export async function apiRequest<T>(
   if (!response.ok) {
     const isAuthEndpoint =
       endpoint.startsWith("/auth/login") ||
-      endpoint.startsWith("/auth/register");
+      endpoint.startsWith("/auth/register") ||
+      endpoint.startsWith("/auth/demo");
 
     if (response.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem("token");

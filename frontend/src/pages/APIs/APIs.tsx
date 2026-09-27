@@ -15,10 +15,12 @@ import {
   updateApi,
 } from "../../services/api.service";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../hooks/useAuth";
 import type { Api, RateLimitAlgorithm } from "../../types";
 import { getApiBaseUrl } from "../../services/apiClient";
 
 export default function APIs() {
+  const { user } = useAuth();
   const { notify } = useToast();
   const [apis, setApis] = useState<Api[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,13 +256,15 @@ export default function APIs() {
                     >
                       Edit API
                     </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      onClick={() => setApiToDelete(api)}
-                    >
-                      Delete API
-                    </Button>
+                    {!user?.isDemo && (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        onClick={() => setApiToDelete(api)}
+                      >
+                        Delete API
+                      </Button>
+                    )}
                   </div>
                 </article>
               ))}

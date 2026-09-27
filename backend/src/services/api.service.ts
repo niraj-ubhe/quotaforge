@@ -1,5 +1,20 @@
 import prisma from "../lib/prisma";
 import NotFoundError from "../errors/NotFoundError";
+import ForbiddenError from "../errors/ForbiddenError";
+import { isDemoEmail } from "../config/demo";
+
+const assertDemoAccountAllowsDelete = async (ownerId: string) => {
+  const owner = await prisma.user.findUnique({
+    where: { id: ownerId },
+    select: { email: true },
+  });
+
+  if (owner && isDemoEmail(owner.email)) {
+    throw new ForbiddenError(
+      "Demo account APIs cannot be deleted so the shared demo stays intact",
+    );
+  }
+};
 
 export const createApi = async (data: {
   name: string;
@@ -74,6 +89,8 @@ export const updateApi = async (
 };
 
 export const deleteApi = async (id: string, ownerId: string) => {
+  await assertDemoAccountAllowsDelete(ownerId);
+
   return prisma.$transaction(async (tx) => {
     const api = await tx.api.findFirst({
       where: {

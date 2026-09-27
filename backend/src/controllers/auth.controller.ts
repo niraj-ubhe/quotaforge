@@ -4,6 +4,7 @@ import asyncHandler from "../utils/asyncHandler";
 import {
   registerUser,
   loginUser,
+  loginDemoUser,
   getCurrentUser,
 } from "../services/auth.service";
 
@@ -25,6 +26,16 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "Login successful",
+    data: result,
+  });
+});
+
+export const loginDemo = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await loginDemoUser();
+
+  res.status(200).json({
+    success: true,
+    message: "Demo login successful",
     data: result,
   });
 });

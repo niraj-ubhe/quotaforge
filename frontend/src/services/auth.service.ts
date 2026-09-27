@@ -21,6 +21,12 @@ export function login(payload: { email: string; password: string }) {
   });
 }
 
+export function loginDemo() {
+  return apiRequest<ApiResponse<{ token: string; user: User }>>("/auth/demo", {
+    method: "POST",
+  });
+}
+
 export function getMe() {
   return apiRequest<ApiResponse<User>>("/auth/me");
 }

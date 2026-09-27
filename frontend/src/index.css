@@ -196,6 +196,10 @@ a {
   background: var(--success);
 }
 
+.status-dot.demo {
+  background: var(--warning);
+}
+
 .user-section {
   display: flex;
   align-items: center;
@@ -754,6 +758,34 @@ select {
   min-height: 44px;
   margin-top: 4px;
   box-shadow: 0 10px 20px rgba(79, 70, 229, 0.22);
+}
+
+.auth-demo {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-demo-submit {
+  box-shadow: none;
 }
 
 .auth-submit:active:not(:disabled) {

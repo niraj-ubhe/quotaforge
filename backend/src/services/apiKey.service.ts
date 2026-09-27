@@ -2,6 +2,8 @@ import prisma from "../lib/prisma";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import NotFoundError from "../errors/NotFoundError";
+import ForbiddenError from "../errors/ForbiddenError";
+import { isDemoEmail } from "../config/demo";
 
 
 export const createApiKey = async (
@@ -83,6 +85,19 @@ export const updateApiKeyStatus = async (
 
   if (!apiKey) {
     throw new NotFoundError("API not found");
+  }
+
+  if (!isActive) {
+    const owner = await prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { email: true },
+    });
+
+    if (owner && isDemoEmail(owner.email)) {
+      throw new ForbiddenError(
+        "Demo account API keys cannot be revoked so the shared demo stays intact",
+      );
+    }
   }
 
   return prisma.apiKey.update({

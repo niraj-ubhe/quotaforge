@@ -22,8 +22,12 @@ export default function Topbar({ onMenu, theme, onThemeToggle }: TopbarProps) {
         <Menu size={20} />
       </button>
       <div className="topbar-status">
-        <span className="status-dot" />
-      {import.meta.env.PROD ? "Production" : "Local environment"}
+        <span className={`status-dot${user?.isDemo ? " demo" : ""}`} />
+        {user?.isDemo
+          ? "Demo Environment"
+          : import.meta.env.PROD
+            ? "Production"
+            : "Local environment"}
       </div>
       <div className="user-section">
         <button

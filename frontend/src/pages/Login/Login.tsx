@@ -7,12 +7,13 @@ import FormField from "../../components/common/FormField";
 import Button from "../../components/common/Button";
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, loginDemo, isAuthenticated } = useAuth();
   const { notify } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   if (isAuthenticated) {
@@ -36,6 +37,19 @@ export default function Login() {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDemo() {
+    setError("");
+    setDemoLoading(true);
+    try {
+      await loginDemo();
+      notify("Signed in to the demo environment");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Demo login failed");
+    } finally {
+      setDemoLoading(false);
     }
   }
 
@@ -84,10 +98,33 @@ export default function Login() {
             }
           />
           {error && <p className="form-banner error">{error}</p>}
-          <Button className="auth-submit" type="submit" loading={loading}>
+          <Button
+            className="auth-submit"
+            type="submit"
+            loading={loading}
+            disabled={demoLoading}
+          >
             Sign in
           </Button>
         </form>
+        <div className="auth-demo">
+          <div className="auth-divider" role="separator">
+            or
+          </div>
+          <p className="auth-copy">
+            Want to explore QuotaForge first? Try the pre-configured demo.
+          </p>
+          <Button
+            className="auth-submit auth-demo-submit"
+            type="button"
+            variant="secondary"
+            loading={demoLoading}
+            disabled={loading}
+            onClick={() => void handleDemo()}
+          >
+            Explore Demo
+          </Button>
+        </div>
         <p className="auth-footer">
           <span>Need an account?</span> <Link to="/register">Create one</Link>
         </p>

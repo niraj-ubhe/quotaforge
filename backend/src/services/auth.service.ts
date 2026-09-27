@@ -1,8 +1,38 @@
 import prisma from "../lib/prisma";
 import bcrypt from "bcrypt";
-import { BadRequestError, UnauthorizedError, NotFoundError } from "../errors";
+import {
+  BadRequestError,
+  UnauthorizedError,
+  NotFoundError,
+} from "../errors";
 
 import jwt from "jsonwebtoken";
+import { isDemoEmail } from "../config/demo";
+import { ensureDemoData, ensureDemoUser } from "./demo.service";
+
+const toPublicUser = (user: {
+  id: string;
+  name: string;
+  email: string;
+  createdAt?: Date;
+}) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  createdAt: user.createdAt,
+  isDemo: isDemoEmail(user.email),
+});
+
+const issueToken = (userId: string) =>
+  jwt.sign(
+    {
+      userId,
+    },
+    process.env.JWT_SECRET!,
+    {
+      expiresIn: "7d",
+    },
+  );
 
 export const registerUser = async (data: {
   name: string;
@@ -15,6 +45,10 @@ export const registerUser = async (data: {
       email: data.email,
     },
   });
+
+  if (isDemoEmail(data.email)) {
+    throw new BadRequestError("This email is reserved for the demo account");
+  }
 
   if (existingUser) {
     throw new BadRequestError("Email already exists");
@@ -61,24 +95,19 @@ export const loginUser = async (data: { email: string; password: string }) => {
     throw new UnauthorizedError("Invalid email or password");
   }
 
-  // Generate JWT
-  const token = jwt.sign(
-    {
-      userId: user.id,
-    },
-    process.env.JWT_SECRET!,
-    {
-      expiresIn: "7d",
-    },
-  );
+  return {
+    token: issueToken(user.id),
+    user: toPublicUser(user),
+  };
+};
+
+export const loginDemoUser = async () => {
+  const user = await ensureDemoUser();
+  await ensureDemoData(user.id);
 
   return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    },
+    token: issueToken(user.id),
+    user: toPublicUser(user),
   };
 };
 
@@ -99,5 +128,5 @@ export const getCurrentUser = async (userId: string) => {
     throw new NotFoundError("User not found");
   }
 
-  return user;
+  return toPublicUser(user);
 };

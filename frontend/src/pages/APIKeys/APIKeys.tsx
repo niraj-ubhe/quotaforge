@@ -16,10 +16,12 @@ import {
   revokeApiKey,
 } from "../../services/apiKey.service";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../hooks/useAuth";
 import type { Api, ApiKey } from "../../types";
 import { formatDate } from "../../utils/format";
 
 export default function APIKeys() {
+  const { user } = useAuth();
   const { notify } = useToast();
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [apis, setApis] = useState<Api[]>([]);
@@ -194,7 +196,7 @@ export default function APIKeys() {
                     <p className="meta">Created {formatDate(key.createdAt)}</p>
                   </div>
                   <div className="entity-actions">
-                    {key.isActive ? (
+                    {user?.isDemo ? null : key.isActive ? (
                       <Button
                         type="button"
                         variant="danger"

@@ -15,6 +15,7 @@ interface AuthContextValue {
   isReady: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginDemo: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -49,6 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.data.user);
   }, []);
 
+  const loginDemo = useCallback(async () => {
+    const response = await authService.loginDemo();
+    localStorage.setItem("token", response.data.token);
+    setUser(response.data.user);
+  }, []);
+
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       await authService.register({ name, email, password });
@@ -68,10 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isReady,
       isAuthenticated: Boolean(user),
       login,
+      loginDemo,
       register,
       logout,
     }),
-    [user, isReady, login, register, logout],
+    [user, isReady, login, loginDemo, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -8,6 +8,7 @@ export interface User {
   name: string;
   email: string;
   createdAt?: string;
+  isDemo?: boolean;
 }
 
 export interface Api {
