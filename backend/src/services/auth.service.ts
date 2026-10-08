@@ -31,6 +31,7 @@ const issueToken = (userId: string) =>
     process.env.JWT_SECRET!,
     {
       expiresIn: "7d",
+      algorithm: "HS256",
     },
   );
 

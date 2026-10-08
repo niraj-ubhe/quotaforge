@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
+import { randomUUID } from "crypto";
 
 import {
   createTestUser,
@@ -8,6 +9,8 @@ import {
 } from "./helpers/testHelpers";
 
 import app from "../app";
+import { slidingWindow } from "../services/rateLimit/slidingWindow.service";
+import { tokenBucket } from "../services/rateLimit/tokenBucket.service";
 
 describe("Gateway", () => {
   it("should allow a request with a valid API key", async () => {
@@ -167,5 +170,23 @@ describe("Gateway", () => {
     expect(response1.status).toBe(200);
     expect(response2.status).toBe(200);
     expect(response3.status).toBe(429);
+  });
+
+  it("should enforce the sliding window limit for concurrent requests", async () => {
+    const key = `test:concurrent:sliding-window:${randomUUID()}`;
+    const results = await Promise.all(
+      Array.from({ length: 32 }, () => slidingWindow(key, 3, 60)),
+    );
+
+    expect(results.filter((allowed) => allowed)).toHaveLength(3);
+  });
+
+  it("should enforce the token bucket capacity for concurrent requests", async () => {
+    const key = `test:concurrent:token-bucket:${randomUUID()}`;
+    const results = await Promise.all(
+      Array.from({ length: 32 }, () => tokenBucket(key, 3, 0.000001)),
+    );
+
+    expect(results.filter((allowed) => allowed)).toHaveLength(3);
   });
 });

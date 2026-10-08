@@ -7,13 +7,18 @@ local capacity = tonumber(ARGV[1])
 local refillRate = tonumber(ARGV[2])
 local now = tonumber(ARGV[3])
 
+local function formatTokens(value)
+    -- Fixed-point formatting avoids exponent notation that tonumber() may reject.
+    return string.format("%.17f", value)
+end
+
 local tokens = redis.call("HGET", key, "tokens")
 local lastRefill = redis.call("HGET", key, "lastRefill")
 
 -- First request
 if not tokens or not lastRefill then
     redis.call("HSET", key,
-        "tokens", capacity - 1,
+        "tokens", formatTokens(capacity - 1),
         "lastRefill", now
     )
 
@@ -39,7 +44,7 @@ local newTokens = math.min(
 -- Not enough tokens
 if newTokens < 1 then
     redis.call("HSET", key,
-        "tokens", newTokens,
+        "tokens", formatTokens(newTokens),
         "lastRefill", now
     )
 
@@ -52,7 +57,7 @@ end
 local remainingTokens = newTokens - 1
 
 redis.call("HSET", key,
-    "tokens", remainingTokens,
+    "tokens", formatTokens(remainingTokens),
     "lastRefill", now
 )
 

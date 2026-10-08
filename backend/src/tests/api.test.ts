@@ -103,6 +103,18 @@ describe("API Management", () => {
     expect(response.body.data.name).toBe("Test API");
   });
 
+  it("should reject an API configured with a loopback upstream", async () => {
+    const token = await createTestUser();
+    const response = await request(app)
+      .post("/apis")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Unsafe API", baseUrl: "http://127.0.0.1:8080" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ success: false, message: "Validation failed" });
+    expect(response.body.errors.baseUrl).toBeDefined();
+  });
+
   it("should return APIs belonging to the logged-in user", async () => {
     // Create a test user and get the JWT
     const token = await createTestUser();

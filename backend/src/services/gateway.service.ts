@@ -2,6 +2,7 @@ import { Request } from "express";
 import axios, { AxiosError } from "axios";
 import prisma from "../lib/prisma";
 import { logRequest } from "./analytics.service";
+import { guardedHttpAgent, guardedHttpsAgent, isSafePublicHttpUrl, isSafeRedirectTarget } from "../security/upstreamUrl";
 
 type GatewayParams = {
   apiId: string;
@@ -17,9 +18,20 @@ export const proxyRequest = async (req: Request<GatewayParams>) => {
   const startTime = Date.now();
 
   try {
+    if (!(await isSafePublicHttpUrl(targetUrl))) {
+      return { status: 400, data: { success: false, message: "Upstream URL is not allowed" } };
+    }
     const response = await axios({
       method: req.method,
       url: targetUrl,
+      httpAgent: guardedHttpAgent,
+      httpsAgent: guardedHttpsAgent,
+      proxy: false,
+      beforeRedirect(options) {
+        if (!isSafeRedirectTarget(options.protocol ?? "", options.hostname ?? "", options.auth)) {
+          throw new Error("Upstream redirect destination is not allowed");
+        }
+      },
 
       // Only forward safe/useful headers
       headers: {

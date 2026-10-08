@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 
-import { createTestUser, createTestApi } from "./helpers/testHelpers";
+import { createTestUser, createTestApi, createTestApiKey } from "./helpers/testHelpers";
 
 import app from "../app";
 
@@ -14,13 +14,7 @@ describe("API Keys", () => {
     const apiId = await createTestApi(token);
 
     // Generate an API key for that API
-    const response = await request(app)
-      .post("/api-keys")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        apiId,
-        name: "My Test Key",
-      });
+    const response = await createTestApiKey(token, apiId, "My Test Key");
 
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
@@ -38,13 +32,7 @@ describe("API Keys", () => {
     const apiId = await createTestApi(token);
 
     // Create an API key
-    await request(app)
-      .post("/api-keys")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        apiId,
-        name: "My List Test Key",
-      });
+    await createTestApiKey(token, apiId, "My List Test Key");
 
     // Get the user's API keys
     const response = await request(app)
@@ -67,13 +55,7 @@ describe("API Keys", () => {
     const apiId = await createTestApi(token);
 
     // Create an API key
-    const keyResponse = await request(app)
-      .post("/api-keys")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        apiId,
-        name: "Key To Revoke",
-      });
+    const keyResponse = await createTestApiKey(token, apiId, "Key To Revoke");
 
     // Show the actual API key response
     // Get the generated key's database ID
@@ -100,13 +82,7 @@ describe("API Keys", () => {
     const apiId = await createTestApi(token);
 
     // Generate an API key
-    const keyResponse = await request(app)
-      .post("/api-keys")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        apiId,
-        name: "Key To Revoke",
-      });
+    const keyResponse = await createTestApiKey(token, apiId, "Key To Revoke");
 
     const rawKey = keyResponse.body.data.key;
 
@@ -157,11 +133,7 @@ describe("API Keys", () => {
     const otherToken = await createTestUser();
     const apiId = await createTestApi(ownerToken);
 
-    await request(app)
-      .post("/api-keys")
-      .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ apiId, name: "Private Owner Key" })
-      .expect(201);
+    await createTestApiKey(ownerToken, apiId, "Private Owner Key");
 
     const ownerKeys = await request(app)
       .get("/api-keys")

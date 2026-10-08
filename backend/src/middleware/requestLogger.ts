@@ -8,7 +8,7 @@ const requestLogger = (req: Request, res: Response, next: NextFunction) => {
 
     logger.info({
       method: req.method,
-      url: req.originalUrl,
+      url: req.path,
       status: res.statusCode,
       duration: `${duration}ms`,
     });

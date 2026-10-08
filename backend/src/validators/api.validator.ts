@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSafePublicHttpUrl } from "../security/upstreamUrl";
 
 export const createApiSchema = z.object({
   name: z
@@ -15,7 +16,7 @@ export const createApiSchema = z.object({
 
   baseUrl: z.url({
     error: "Base URL must be a valid URL",
-  }),
+  }).refine(isSafePublicHttpUrl, "Base URL must point to a public HTTP or HTTPS destination"),
 
   requestsPerMinute: z.number().int().positive().max(100000).optional(),
 
