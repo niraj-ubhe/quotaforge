@@ -1,0 +1,85 @@
+name: Backend CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: quotaforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d quotaforge"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/quotaforge
+      JWT_SECRET: ci-only-test-secret
+      UPSTASH_REDIS_REST_URL: http://localhost:8080
+      UPSTASH_REDIS_REST_TOKEN: ci-only-test-token
+      URS_TOKEN: ci-only-test-token
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Migrate test database and run backend tests/build
+        shell: bash
+        run: |
+          npx prisma migrate deploy
+
+          npx --yes @humanwhocodes/upstash-redis-server@1.0.0 > /tmp/upstash-redis-server.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --silent --fail \
+              -H "Authorization: Bearer ${UPSTASH_REDIS_REST_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '["PING"]' \
+              "${UPSTASH_REDIS_REST_URL}/" > /dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              cat /tmp/upstash-redis-server.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          npm test -- --run --exclude dist
+          npm run build
