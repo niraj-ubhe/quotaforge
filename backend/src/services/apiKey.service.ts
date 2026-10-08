@@ -20,7 +20,7 @@ export const createApiKey = async (
   });
 
   if (!api) {
-    throw new Error("API not found");
+    throw new NotFoundError("API not found");
   }
 
   const prefix =

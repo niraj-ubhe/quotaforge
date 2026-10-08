@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 
 import app from "../app";
-import { createTestApi, createTestUser } from "./helpers/testHelpers";
+import { createTestApi, createTestApiWithKey, createTestUser } from "./helpers/testHelpers";
 import { DEMO_USER_EMAIL } from "../config/demo";
 
 describe("Demo authentication", () => {
@@ -46,10 +46,14 @@ describe("Demo authentication", () => {
     const otherApiId = await createTestApi(otherToken);
 
     const response = await request(app)
-      .delete(`/apis/${otherApiId}`)
+      .get(`/apis/${otherApiId}`)
       .set("Authorization", `Bearer ${demoToken}`);
 
     expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({
+      success: false,
+      message: "API not found",
+    });
   });
 
   it("should not let another user access a demo API", async () => {
@@ -75,6 +79,44 @@ describe("Demo authentication", () => {
       .set("Authorization", `Bearer ${otherToken}`);
 
     expect(deleteResponse.status).toBe(404);
+  });
+
+  it("should keep demo APIs and API keys isolated from normal users", async () => {
+    const demoResponse = await request(app).post("/auth/demo");
+    const demoToken = demoResponse.body.data.token;
+    const demoApis = await request(app)
+      .get("/apis")
+      .set("Authorization", `Bearer ${demoToken}`);
+    const demoApiId = demoApis.body.data[0].id;
+
+    const demoKeys = await request(app)
+      .get("/api-keys")
+      .set("Authorization", `Bearer ${demoToken}`);
+    const demoKeyId = demoKeys.body.data[0].id;
+
+    const normalToken = await createTestUser();
+    const { apiId: normalApiId } = await createTestApiWithKey(normalToken);
+    const normalApis = await request(app)
+      .get("/apis")
+      .set("Authorization", `Bearer ${normalToken}`);
+    const normalKeys = await request(app)
+      .get("/api-keys")
+      .set("Authorization", `Bearer ${normalToken}`);
+
+    expect(demoApis.body.data).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: normalApiId })]),
+    );
+    expect(demoKeys.body.data).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ apiId: normalApiId }),
+      ]),
+    );
+    expect(normalApis.body.data).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: demoApiId })]),
+    );
+    expect(normalKeys.body.data).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: demoKeyId })]),
+    );
   });
 
   it("should prevent the demo user from deleting demo APIs", async () => {

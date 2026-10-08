@@ -41,6 +41,13 @@ export const apiKeyMiddleware = async (
     });
   }
 
+  if (storedKey.apiId !== req.params.apiId) {
+    return res.status(404).json({
+      success: false,
+      message: "API not found",
+    });
+  }
+
   if (!storedKey.isActive) {
     return res.status(401).json({
       success: false,

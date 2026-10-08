@@ -40,6 +40,28 @@ describe("Gateway", () => {
     expect(response.status).toBe(401);
   });
 
+  it("should reject an API key when the gateway URL names another user's API", async () => {
+    const ownerToken = await createTestUser();
+    const otherToken = await createTestUser();
+    const { apiId: ownerApiId, apiKey } = await createTestApiWithKey(ownerToken);
+    const otherApiId = await createTestApi(otherToken);
+
+    const response = await request(app)
+      .get(`/gateway/${otherApiId}/posts`)
+      .set("x-api-key", apiKey);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({
+      success: false,
+      message: "API not found",
+    });
+
+    const ownerAnalytics = await request(app)
+      .get(`/analytics/apis/${ownerApiId}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(ownerAnalytics.body.data.totalRequests).toBe(0);
+  });
+
   it("should reject requests after the rate limit is exceeded", async () => {
     // Create a test user and get the JWT
     const token = await createTestUser();

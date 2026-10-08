@@ -165,4 +165,34 @@ describe("API Management", () => {
     expect(response.body.data).toHaveLength(1);
     expect(response.body.data[0].name).toBe("User A API");
   });
+
+  it("should not let a user read or update another user's API", async () => {
+    const ownerToken = await createTestUser();
+    const otherToken = await createTestUser();
+    const apiId = await createTestApi(ownerToken);
+
+    const readResponse = await request(app)
+      .get(`/apis/${apiId}`)
+      .set("Authorization", `Bearer ${otherToken}`);
+    const updateResponse = await request(app)
+      .patch(`/apis/${apiId}`)
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({ name: "Unauthorized update" });
+
+    expect(readResponse.status).toBe(404);
+    expect(readResponse.body).toMatchObject({
+      success: false,
+      message: "API not found",
+    });
+    expect(updateResponse.status).toBe(404);
+    expect(updateResponse.body).toMatchObject({
+      success: false,
+      message: "API not found",
+    });
+
+    const ownerReadResponse = await request(app)
+      .get(`/apis/${apiId}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(ownerReadResponse.body.data.name).toBe("Test API");
+  });
 });

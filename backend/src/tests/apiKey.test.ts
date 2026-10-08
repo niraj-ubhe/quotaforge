@@ -151,4 +151,74 @@ describe("API Keys", () => {
     // The gateway should reject the key
     expect(response.status).toBe(401);
   });
+
+  it("should not expose or manage another user's API key", async () => {
+    const ownerToken = await createTestUser();
+    const otherToken = await createTestUser();
+    const apiId = await createTestApi(ownerToken);
+
+    await request(app)
+      .post("/api-keys")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ apiId, name: "Private Owner Key" })
+      .expect(201);
+
+    const ownerKeys = await request(app)
+      .get("/api-keys")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    const privateKeyId = ownerKeys.body.data.find(
+      (key: { name: string }) => key.name === "Private Owner Key",
+    ).id;
+
+    const otherKeys = await request(app)
+      .get("/api-keys")
+      .set("Authorization", `Bearer ${otherToken}`);
+    const revokeResponse = await request(app)
+      .patch(`/api-keys/${privateKeyId}/revoke`)
+      .set("Authorization", `Bearer ${otherToken}`);
+    const activateResponse = await request(app)
+      .patch(`/api-keys/${privateKeyId}/activate`)
+      .set("Authorization", `Bearer ${otherToken}`);
+
+    expect(otherKeys.status).toBe(200);
+    expect(otherKeys.body.data).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: privateKeyId })]),
+    );
+    expect(revokeResponse.status).toBe(404);
+    expect(revokeResponse.body).toMatchObject({
+      success: false,
+      message: "API not found",
+    });
+    expect(activateResponse.status).toBe(404);
+    expect(activateResponse.body).toMatchObject({
+      success: false,
+      message: "API not found",
+    });
+
+    const ownerKeysAfter = await request(app)
+      .get("/api-keys")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(
+      ownerKeysAfter.body.data.find(
+        (key: { id: string }) => key.id === privateKeyId,
+      ).isActive,
+    ).toBe(true);
+  });
+
+  it("should not create a key for another user's API", async () => {
+    const ownerToken = await createTestUser();
+    const otherToken = await createTestUser();
+    const apiId = await createTestApi(ownerToken);
+
+    const response = await request(app)
+      .post("/api-keys")
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({ apiId, name: "Unauthorized Key" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({
+      success: false,
+      message: "API not found",
+    });
+  });
 });

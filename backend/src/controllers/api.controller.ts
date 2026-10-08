@@ -8,6 +8,7 @@ import {
 } from "../services/api.service";
 
 import asyncHandler from "../utils/asyncHandler";
+import NotFoundError from "../errors/NotFoundError";
 
 type ApiParams = {
   id: string;
@@ -38,6 +39,10 @@ export const getAll = asyncHandler(async (req, res) => {
 export const getOne = asyncHandler(
   async (req: Request<ApiParams>, res: Response) => {
     const api = await getApiById(req.params.id, req.user!.userId);
+
+    if (!api) {
+      throw new NotFoundError("API not found");
+    }
 
     res.status(200).json({
       success: true,

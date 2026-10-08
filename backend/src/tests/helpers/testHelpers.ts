@@ -1,9 +1,10 @@
 import request from "supertest";
+import { randomUUID } from "crypto";
 import app from "../../app";
 
 // Creates a test user and returns the JWT token
 export async function createTestUser() {
-  const email = `test-${Date.now()}@example.com`;
+  const email = `test-${randomUUID()}@example.com`;
   const password = "password123";
 
   await request(app).post("/auth/register").send({
