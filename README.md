@@ -1,370 +1,182 @@
 # QuotaForge
 
-**Developer API Management & Gateway Platform**
+QuotaForge is a multi-tenant API management and gateway platform for configuring upstream APIs, securing access with API keys, enforcing rate limits, and reviewing request analytics.
 
-QuotaForge is a multi-tenant API management platform that lets developers register upstream APIs, issue and manage API keys, protect gateway traffic with configurable rate limits, and monitor API usage through analytics.
+## Live Demo
 
-**Live Demo:** [QuotaForge](https://quotaforge.vercel.app/login)
+- Frontend: [quotaforge.vercel.app](https://quotaforge.vercel.app)
+- Backend health: [quotaforge-ax65.onrender.com/health](https://quotaforge-ax65.onrender.com/health)
+- API reference: [Swagger UI](https://quotaforge-ax65.onrender.com/api-docs/)
+- Source: [github.com/niraj-ubhe/quotaforge](https://github.com/niraj-ubhe/quotaforge)
 
-## What it does
+## What is QuotaForge?
 
-QuotaForge sits between API consumers and upstream services:
+QuotaForge provides a control plane for registering upstream APIs and managing their keys and rate-limit settings. API consumers send traffic through a gateway endpoint instead of calling the upstream directly. The gateway validates the key, applies the configured limit, forwards allowed requests, and records results for the API owner.
 
-```text
-API Consumer
-     │
-     │  API request + x-api-key
-     ▼
-QuotaForge Gateway
-     │
-     ├── API-key authentication
-     ├── Rate limiting
-     ├── Request logging
-     └── Analytics
-     │
-     ▼
-Upstream API
-```
-
-The dashboard provides a control plane for managing APIs, keys, rate limits, and traffic analytics.
-
-## Features
-
-### API Management
-- Register upstream APIs
-- Edit API configuration
-- Configure per-API rate limits
-- Delete APIs with confirmation
-- Automatic API ID generation
-
-### API Keys
-- Generate API keys
-- Secure key handling
-- Revoke keys
-- Reactivate revoked keys
-- Gateway authentication through `x-api-key`
-
-### Rate Limiting
-Supports three algorithms:
-
-- Fixed Window
-- Sliding Window
-- Token Bucket
-
-Rate-limit state is stored in Redis so gateway traffic can be controlled independently of the dashboard.
-
-### Gateway
-Requests are proxied through:
+## Architecture
 
 ```text
-/gateway/:apiId/*
+Dashboard ── JWT ──> QuotaForge API ──> PostgreSQL
+                           │             (users, APIs, keys, analytics)
+API Client ── API key ──> Gateway
+                           ├── Validate key and target API
+                           ├── Check/update rate-limit state ──> Redis
+                           ├── Proxy allowed request ──> Upstream API
+                           └── Record request analytics ──> PostgreSQL
 ```
 
-Example:
+For a gateway request, QuotaForge authenticates the API key, checks that it is active and belongs to the requested API, applies that API's selected rate-limit algorithm, and proxies allowed traffic to its configured upstream. It records the outcome and response time for analytics.
 
-```text
-/gateway/<API_ID>/posts
-```
+## Key Features
 
-The gateway authenticates the API key, applies rate limiting, forwards the request to the configured upstream API, and records request information for analytics.
+- User registration and JWT-based authentication, including an Explore Demo account.
+- Multi-tenant API registration, configuration, and deletion.
+- API-key generation, listing, revocation, and reactivation.
+- Gateway proxying with per-key Redis rate-limit state and configurable algorithms.
+- Analytics for request volume, status codes, response times, popular endpoints, and timelines.
+- Swagger/OpenAPI documentation for the backend API.
 
-### Analytics
-The dashboard provides:
+## Rate Limiting
 
-- Request timeline
-- HTTP status-code breakdown
-- Top endpoints
-- Request counts
-- Rate-limit activity
+Each API is configured with a request limit and one of three algorithms:
 
-Endpoint analytics normalize gateway paths so equivalent requests are represented by the actual upstream endpoint, for example:
+- **Fixed Window** increments a Redis counter and expires it after the window.
+- **Sliding Window** counts requests within the rolling window using a Redis Lua script.
+- **Token Bucket** tracks available tokens and refill state using a Redis Lua script.
 
-```text
-/posts
-```
+Redis provides shared state across backend instances. Sliding Window and Token Bucket perform their state checks and updates atomically in Lua; Fixed Window uses Redis's atomic `INCR` operation for its counter.
 
-rather than:
+## Security
 
-```text
-/gateway/<apiId>/posts
-```
+- API keys contain a generated secret; the stored secret is bcrypt-hashed. The raw key is returned only when created.
+- API management and analytics queries are scoped to the authenticated user's resources. Gateway keys are checked against the requested API.
+- Configured upstream URLs are restricted to public HTTP(S) destinations; loopback, private, link-local, and metadata destinations are blocked, and DNS/redirects are rechecked to reduce SSRF risk.
+- Production startup validates `JWT_SECRET`; tokens use the explicitly configured HS256 signing algorithm.
+- Login attempts are throttled by IP using Redis.
+- CORS allows the production frontend and local development origins; Helmet supplies security headers.
+- Request logging omits query strings and does not log Authorization or API-key headers.
 
-### Dashboard UI
-- Dark/light theme toggle
-- Responsive dashboard
-- Consistent reusable components
-- Confirmation dialogs
-- Toast notifications
-- Interactive analytics charts
-- Polished authentication screens
+## Analytics
+
+Gateway requests are recorded with their method, upstream-relative path, status code, response time, and timestamp. The dashboard summarizes request and success/failure counts, average response time, status-code totals, most-used endpoints, and request timelines.
 
 ## Tech Stack
 
-### Frontend
-- React
-- TypeScript
-- Vite
-- Chart.js
-- Lucide React
-
-### Backend
-- Node.js
-- Express
-- TypeScript
-- Prisma
-- JWT
-- Zod
-- bcrypt
-- Axios
-
-### Data & Infrastructure
-- PostgreSQL
-- Neon
-- Redis / Upstash
-- Docker Compose for local development
-
-### Deployment
-- Frontend: Vercel
-- Backend: Render
-- Database: Neon
-- Redis: Upstash
+| Area | Technologies |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, Recharts, Lucide React |
+| Backend | Node.js, Express, TypeScript, Axios, Zod |
+| Authentication and keys | JWT, bcrypt, Node.js cryptographic random bytes |
+| Persistence | PostgreSQL, Prisma |
+| Rate-limit state | Upstash Redis |
+| API documentation | Swagger UI, OpenAPI |
+| Tests | Vitest, Supertest |
+| CI and deployment | GitHub Actions, Vercel, Render, Neon, Upstash |
 
 ## Project Structure
 
 ```text
 quotaforge/
+├── .github/workflows/       # Backend CI workflow
 ├── backend/
-│   ├── prisma/
+│   ├── prisma/              # Schema and migrations
 │   └── src/
+│       ├── config/
+│       ├── controllers/
+│       ├── docs/             # OpenAPI document
+│       ├── middleware/
+│       ├── routes/
+│       ├── security/
+│       ├── services/
+│       ├── tests/
+│       └── validators/
 ├── frontend/
-│   ├── public/
 │   └── src/
-├── docker-compose.yml
+│       ├── components/
+│       ├── context/
+│       ├── layouts/
+│       ├── pages/
+│       └── services/
+├── docker-compose.yml       # Local PostgreSQL service
 └── README.md
 ```
 
+## API Documentation
+
+Swagger UI is served by the backend at [`/api-docs/`](https://quotaforge-ax65.onrender.com/api-docs/). It documents the main authentication, API management, API-key, gateway, and analytics endpoints. The deployed URL was checked and returned the Swagger UI successfully.
+
+## Testing and CI
+
+The backend uses Vitest and Supertest for route, authorization, gateway, analytics, and security regression tests. The current source suite has **59 passing tests**. Run it from `backend/`:
+
+```bash
+npm test -- --run --exclude dist
+npm run build
+```
+
+The GitHub Actions workflow provisions PostgreSQL and a Redis-compatible test service, then runs the backend tests and build.
+
 ## Local Development
 
-### Prerequisites
+### Requirements
 
-- Node.js 20+
-- npm
-- Docker Desktop
-- PostgreSQL or Docker
-- Upstash Redis account for rate limiting
+- Node.js 22 and npm (the version used by backend CI).
+- Docker Desktop (or a PostgreSQL instance).
+- An Upstash Redis REST endpoint and token for backend rate limiting.
 
-### 1. Clone the repository
+The repository's Docker Compose file starts PostgreSQL only; it does not start Redis.
 
-```bash
-git clone https://github.com/niraj-ubhe/quotaforge.git
-cd quotaforge
-```
+### Setup
 
-### 2. Configure the backend
+1. Clone the repository and create local environment files:
 
-Copy:
+   ```bash
+   git clone https://github.com/niraj-ubhe/quotaforge.git
+   cd quotaforge
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   ```
 
-```text
-backend/.env.example
-```
+2. Fill in the local backend settings in `backend/.env`, including a private development `JWT_SECRET`, `DATABASE_URL`, and the Upstash Redis REST URL and token. The template's PostgreSQL URL matches the included Docker Compose service.
 
-to:
+3. Start PostgreSQL and prepare the backend:
 
-```text
-backend/.env
-```
+   ```bash
+   docker compose up -d postgres
+   cd backend
+   npm install
+   npx prisma generate
+   npx prisma migrate dev
+   npm run dev
+   ```
 
-Set:
+4. In a second terminal, install and start the frontend:
 
-```env
-PORT=5000
-NODE_ENV=development
-DATABASE_URL=your_postgresql_connection_string
-JWT_SECRET=your_jwt_secret
-UPSTASH_REDIS_REST_URL=your_upstash_redis_url
-UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_token
-```
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-Never commit `.env` files or real credentials.
+   The frontend template points to `http://localhost:5000`; Vite prints the local frontend URL when it starts.
 
-### 3. Configure the frontend
+See [`backend/.env.example`](backend/.env.example) and [`frontend/.env.example`](frontend/.env.example) for the variable names. Never commit `.env` files or real credentials.
 
-Copy:
+### Environment Variables
 
-```text
-frontend/.env.example
-```
+- Backend: `DATABASE_URL`, `JWT_SECRET`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN` configure persistence, authentication, and rate-limit state. `PORT` and `NODE_ENV` control the server; demo-account overrides are optional.
+- Frontend: `VITE_API_URL` selects the backend base URL.
 
-to:
+## Deployment
 
-```text
-frontend/.env
-```
+The frontend is deployed on Vercel and the Express backend on Render. The deployed backend uses Neon PostgreSQL and Upstash Redis. Production environment variables are configured by the hosting platforms rather than committed to the repository.
 
-For local development:
+## Future Improvements
 
-```env
-VITE_API_URL=http://localhost:5000
-```
-
-### 4. Install dependencies
-
-Backend:
-
-```bash
-cd backend
-npm install
-```
-
-Frontend:
-
-```bash
-cd ../frontend
-npm install
-```
-
-### 5. Generate Prisma Client and migrate
-
-From `backend/`:
-
-```bash
-npx prisma generate
-npx prisma migrate dev
-```
-
-For an already-created deployment database, use the appropriate Prisma migration command rather than `db push`.
-
-### 6. Start the backend
-
-From `backend/`:
-
-```bash
-npm run dev
-```
-
-Backend health check:
-
-```text
-GET /health
-```
-
-### 7. Start the frontend
-
-From `frontend/`:
-
-```bash
-npm run dev
-```
-
-Open the Vite development URL shown in the terminal.
-
-## Gateway Example
-
-After registering an API and generating an API key:
-
-```bash
-curl -i http://localhost:5000/gateway/<API_ID>/posts \
-  -H "x-api-key: <API_KEY>"
-```
-
-The same request can be sent to the deployed backend by replacing the local backend origin with the production backend URL.
-
-## Example Rate-Limit Flow
-
-For an API configured for 5 requests per minute:
-
-```text
-Requests 1–5  →  upstream request
-Requests 6+   →  HTTP 429
-```
-
-The exact result also depends on the selected rate-limiting algorithm and upstream response.
-
-## Testing
-
-Backend build:
-
-```bash
-cd backend
-npm run build
-```
-
-Backend tests:
-
-```bash
-npm test
-```
-
-Frontend production build:
-
-```bash
-cd frontend
-npm run build
-```
-
-## Production Architecture
-
-```text
-                         ┌─────────────────────┐
-                         │       Vercel        │
-                         │  React / Vite App   │
-                         └──────────┬──────────┘
-                                    │
-                                    │ HTTPS / REST
-                                    ▼
-                         ┌─────────────────────┐
-                         │       Render        │
-                         │ Express / Node API  │
-                         └───────┬─────┬───────┘
-                                 │     │
-                    ┌────────────┘     └────────────┐
-                    ▼                               ▼
-             ┌─────────────┐                 ┌─────────────┐
-             │    Neon     │                 │   Upstash   │
-             │ PostgreSQL  │                 │    Redis    │
-             └─────────────┘                 └─────────────┘
-```
-
-## Security Notes
-
-- API keys are not intended to be stored as plaintext credentials.
-- Raw API keys should be treated as secrets.
-- JWT signing secrets must be long, random, and private.
-- Production environment variables must be configured through the deployment platform.
-- Do not commit `.env` files, database credentials, Redis tokens, or API keys.
-
-## Current Status
-
-QuotaForge currently includes:
-
-- Authentication
-- API registration and editing
-- API deletion with confirmation
-- API-key generation, revocation, and activation
-- Gateway proxying
-- Fixed Window, Sliding Window, and Token Bucket rate limiting
-- Request logging
-- Normalized endpoint analytics
-- Status and timeline analytics
-- Dark/light theme support
-- Production frontend and backend deployments
-
-## Roadmap
-
-Possible future improvements:
-
-- API usage quotas
-- Per-key rate limits
-- API versioning
-- Request/response inspection
-- Advanced analytics filters
-- API documentation generation
-- Team/workspace management
-- Automated CI checks
-- Custom domains and production observability
+- Team and workspace roles for shared API administration.
+- API versioning and usage-plan or quota policies.
+- Configurable analytics retention and export.
 
 ## Author
 
-**Niraj Ubhe**
-
-Built as a full-stack backend-focused project to explore API gateways, authentication, rate limiting, distributed state, analytics, and production deployment.
+[Niraj Ubhe](https://github.com/niraj-ubhe)
